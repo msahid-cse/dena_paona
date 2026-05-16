@@ -102,6 +102,22 @@ export async function initializeDatabase() {
       )
     `);
 
+    // Email logs table
+    await query(`
+      CREATE TABLE IF NOT EXISTS email_logs (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        recipient_email VARCHAR(255) NOT NULL,
+        recipient_name VARCHAR(255),
+        sender_id UUID REFERENCES users(id) ON DELETE SET NULL,
+        subject VARCHAR(500) NOT NULL,
+        email_type VARCHAR(50) NOT NULL,
+        status VARCHAR(20) DEFAULT 'sent',
+        error_message TEXT,
+        metadata JSONB,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      )
+    `);
+
     // Create indexes for performance
     await query(`CREATE INDEX IF NOT EXISTS idx_transactions_owner ON transactions(owner_id)`);
     await query(`CREATE INDEX IF NOT EXISTS idx_transactions_contact ON transactions(contact_user_id)`);
@@ -109,6 +125,8 @@ export async function initializeDatabase() {
     await query(`CREATE INDEX IF NOT EXISTS idx_verification_codes_user ON verification_codes(user_id)`);
     await query(`CREATE INDEX IF NOT EXISTS idx_users_username ON users(username)`);
     await query(`CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_email_logs_recipient ON email_logs(recipient_email)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_email_logs_type ON email_logs(email_type)`);
 
     // Add computed column trigger for remaining_amount
     await query(`

@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { ThemeProvider } from "@/contexts/ThemeContext";
+import { LanguageProvider } from "@/contexts/LanguageContext";
 import { Toaster } from "react-hot-toast";
 
 export const metadata: Metadata = {
@@ -13,6 +15,7 @@ export const metadata: Metadata = {
     description: "Track your debts and credits securely with Dena-Paona.",
     type: "website",
   },
+  viewport: 'width=device-width, initial-scale=1, maximum-scale=5',
 };
 
 export default function RootLayout({
@@ -25,31 +28,37 @@ export default function RootLayout({
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <meta charSet="utf-8" />
+        <meta name="theme-color" content="#0a0f1e" />
       </head>
       <body>
-        <AuthProvider>
-          {children}
-          <Toaster
-            position="top-right"
-            toastOptions={{
-              duration: 4000,
-              style: {
-                background: '#141d35',
-                color: '#e2e8f0',
-                border: '1px solid #1e2d4a',
-                borderRadius: '12px',
-                fontSize: '14px',
-                padding: '12px 16px',
-              },
-              success: {
-                iconTheme: { primary: '#10b981', secondary: 'white' },
-              },
-              error: {
-                iconTheme: { primary: '#f43f5e', secondary: 'white' },
-              },
-            }}
-          />
-        </AuthProvider>
+        <ThemeProvider>
+          <LanguageProvider>
+            <AuthProvider>
+              {children}
+              <Toaster
+                position="top-right"
+                toastOptions={{
+                  duration: 4000,
+                  style: {
+                    background: 'var(--bg-card)',
+                    color: 'var(--text-primary)',
+                    border: '1px solid var(--border)',
+                    borderRadius: '12px',
+                    fontSize: '14px',
+                    padding: '12px 16px',
+                  },
+                  success: {
+                    iconTheme: { primary: '#10b981', secondary: 'white' },
+                  },
+                  error: {
+                    iconTheme: { primary: '#f43f5e', secondary: 'white' },
+                  },
+                }}
+              />
+            </AuthProvider>
+          </LanguageProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
