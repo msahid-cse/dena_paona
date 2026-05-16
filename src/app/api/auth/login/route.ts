@@ -3,17 +3,26 @@ import bcrypt from 'bcryptjs';
 import { query } from '@/lib/db';
 import { signToken } from '@/lib/jwt';
 
+interface UserRow {
+  id: string;
+  name: string;
+  username: string;
+  email: string;
+  phone: string;
+  password_hash: string;
+  is_verified: boolean;
+  is_admin: boolean;
+  is_banned: boolean;
+}
+
 export async function POST(req: NextRequest) {
   try {
     const { identifier, password } = await req.json();
-
     if (!identifier || !password) {
       return NextResponse.json({ error: 'Email/username and password are required' }, { status: 400 });
     }
 
     const cleanIdentifier = identifier.trim().toLowerCase();
-
-    // Find user by email or username
     const result = await query(
       `SELECT id, name, username, email, phone, password_hash, is_verified, is_admin, is_banned
        FROM users WHERE email = $1 OR username = $1`,
@@ -24,7 +33,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
     }
 
-    const user = result.rows[0];
+    const user = result.rows[0] as unknown as UserRow;
 
     if (user.is_banned) {
       return NextResponse.json({ error: 'Your account has been banned. Contact support.' }, { status: 403 });
@@ -38,13 +47,11 @@ export async function POST(req: NextRequest) {
       }, { status: 403 });
     }
 
-    // Check password
     const isPasswordValid = await bcrypt.compare(password, user.password_hash);
     if (!isPasswordValid) {
       return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
     }
 
-    // Generate JWT
     const token = signToken({
       userId: user.id,
       email: user.email,
@@ -52,7 +59,6 @@ export async function POST(req: NextRequest) {
       isAdmin: user.is_admin,
     });
 
-    // Log activity
     await query(
       `INSERT INTO activity_logs (user_id, action, description) VALUES ($1, 'login', 'User logged in')`,
       [user.id]
@@ -71,16 +77,14 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Set cookie as well
     response.cookies.set('auth_token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60, // 7 days
+      maxAge: 7 * 24 * 60 * 60,
     });
 
     return response;
-
   } catch (error) {
     console.error('Login error:', error);
     return NextResponse.json({ error: 'Login failed. Please try again.' }, { status: 500 });

@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
     }
 
     const countResult = await query(`SELECT COUNT(*) FROM users ${whereClause}`, params);
-    const totalCount = parseInt(countResult.rows[0].count);
+    const totalCount = parseInt(String(countResult.rows[0].count));
 
     const queryParams = search ? [...params, limit, offset] : [limit, offset];
     const paramOffset = search ? 2 : 1;
@@ -55,7 +55,7 @@ export async function GET(req: NextRequest) {
 
     const usersWithStats = usersResult.rows.map(u => ({
       ...u,
-      stats: transactionStats[u.id] || { transaction_count: 0, total_amount: 0 }
+      stats: transactionStats[u.id as string] || { transaction_count: 0, total_amount: 0 }
     }));
 
     return NextResponse.json({

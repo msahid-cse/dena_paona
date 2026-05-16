@@ -16,7 +16,8 @@ function getSql() {
 export default getSql;
 
 export interface QueryResult {
-  rows: Record<string, unknown>[];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  rows: any[];
   rowCount: number;
 }
 
@@ -39,11 +40,11 @@ export async function query(text: string, params?: unknown[]): Promise<QueryResu
     
     // neon sql.query() may return rows directly as an array OR as {rows, rowCount}
     if (Array.isArray(result)) {
-      return { rows: result as Record<string, unknown>[], rowCount: result.length };
+      return { rows: result as any[], rowCount: result.length };
     }
-    const r = result as { rows?: unknown[]; rowCount?: number };
+    const r = result as { rows?: any[]; rowCount?: number };
     return {
-      rows: (r.rows || []) as Record<string, unknown>[],
+      rows: (r.rows || []) as any[],
       rowCount: r.rowCount ?? (r.rows?.length || 0),
     };
   } catch (error) {

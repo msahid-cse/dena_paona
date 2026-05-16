@@ -24,11 +24,11 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({
       stats: {
-        totalUsers: parseInt(totalUsers.rows[0].count),
-        verifiedUsers: parseInt(verifiedUsers.rows[0].count),
-        bannedUsers: parseInt(bannedUsers.rows[0].count),
-        totalTransactions: parseInt(totalTransactions.rows[0].count),
-        totalVolume: parseFloat(totalVolume.rows[0].total),
+        totalUsers: parseInt(String(totalUsers.rows[0].count)),
+        verifiedUsers: parseInt(String(verifiedUsers.rows[0].count)),
+        bannedUsers: parseInt(String(bannedUsers.rows[0].count)),
+        totalTransactions: parseInt(String(totalTransactions.rows[0].count)),
+        totalVolume: parseFloat(String(totalVolume.rows[0].total)),
       },
       recentLogs: recentLogs.rows,
       recentActivity: recentActivity.rows,
