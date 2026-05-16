@@ -2,6 +2,8 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useEffect, useState, useCallback } from 'react';
+import axios from 'axios';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useLanguage, Language } from '@/contexts/LanguageContext';
@@ -16,12 +18,34 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const { language, setLanguage, t } = useLanguage();
+  const [unreadNotifs, setUnreadNotifs] = useState(0);
+  const [unreadMessages, setUnreadMessages] = useState(0);
+
+  const fetchBadges = useCallback(async () => {
+    if (!user) return;
+    try {
+      const token = localStorage.getItem('dp_token');
+      const headers = { Authorization: `Bearer ${token}` };
+      const [notifRes] = await Promise.all([
+        axios.get('/api/notifications?unread=true', { headers }),
+      ]);
+      setUnreadNotifs(notifRes.data.unreadCount || 0);
+    } catch { /* silent */ }
+  }, [user]);
+
+  useEffect(() => {
+    fetchBadges();
+    const interval = setInterval(fetchBadges, 30000); // poll every 30s
+    return () => clearInterval(interval);
+  }, [fetchBadges]);
 
   const navItems = [
     { href: '/dashboard', icon: '📊', label: t('dashboard') },
     { href: '/transactions', icon: '💳', label: t('transactions') },
     { href: '/transactions/new', icon: '➕', label: t('addTransaction') },
     { href: '/contacts', icon: '👥', label: t('contacts') },
+    { href: '/notifications', icon: '🔔', label: 'Notifications', badge: unreadNotifs },
+    { href: '/chat', icon: '💬', label: 'Messages', badge: unreadMessages },
     { href: '/activity', icon: '📋', label: t('activityLog') },
     { href: '/profile', icon: '👤', label: t('profile') },
   ];
@@ -37,11 +61,7 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
   return (
     <>
       {mobileOpen && (
-        <div
-          className="modal-overlay"
-          onClick={onClose}
-          style={{ zIndex: 39, background: 'rgba(0,0,0,0.6)' }}
-        />
+        <div className="modal-overlay" onClick={onClose} style={{ zIndex: 39, background: 'rgba(0,0,0,0.6)' }} />
       )}
 
       <aside className={`sidebar ${mobileOpen ? 'open' : ''}`}>
@@ -87,7 +107,12 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
               onClick={onClose}
             >
               <span style={{ fontSize: 15 }}>{item.icon}</span>
-              <span style={{ fontSize: 13 }}>{item.label}</span>
+              <span style={{ fontSize: 13, flex: 1 }}>{item.label}</span>
+              {item.badge && item.badge > 0 ? (
+                <span style={{ background: 'var(--accent-red)', color: 'white', borderRadius: 20, padding: '2px 7px', fontSize: 10, fontWeight: 700, minWidth: 18, textAlign: 'center' }}>
+                  {item.badge > 99 ? '99+' : item.badge}
+                </span>
+              ) : null}
             </Link>
           ))}
 
@@ -113,29 +138,16 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
 
         {/* Theme + Language + Logout */}
         <div style={{ padding: '10px 10px', borderTop: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {/* Theme & Language row */}
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <button
-              className="theme-toggle"
-              onClick={toggleTheme}
-              title={theme === 'dark' ? t('lightMode') : t('darkMode')}
-              style={{ flex: '0 0 auto' }}
-            >
+            <button className="theme-toggle" onClick={toggleTheme} title={theme === 'dark' ? t('lightMode') : t('darkMode')}>
               {theme === 'dark' ? '☀️' : '🌙'}
             </button>
-            <select
-              className="lang-select"
-              value={language}
-              onChange={e => setLanguage(e.target.value as Language)}
-              style={{ flex: 1 }}
-            >
+            <select className="lang-select" value={language} onChange={e => setLanguage(e.target.value as Language)} style={{ flex: 1 }}>
               <option value="en">🇬🇧 English</option>
               <option value="bn">🇧🇩 বাংলা</option>
               <option value="banglish">🔤 Banglish</option>
             </select>
           </div>
-
-          {/* Logout */}
           <button className="nav-link" onClick={logout} style={{ color: 'var(--accent-red-light)', padding: '10px 14px' }}>
             <span style={{ fontSize: 15 }}>🚪</span>
             <span style={{ fontSize: 13 }}>{t('logout')}</span>

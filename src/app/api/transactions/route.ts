@@ -10,8 +10,8 @@ export async function GET(req: NextRequest) {
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const { searchParams } = new URL(req.url);
-    const type = searchParams.get('type'); // dena, paona
-    const status = searchParams.get('status'); // pending, partial, cleared
+    const type = searchParams.get('type');
+    const status = searchParams.get('status');
     const search = searchParams.get('search') || '';
 
     let queryText = `
@@ -27,24 +27,12 @@ export async function GET(req: NextRequest) {
     const params: unknown[] = [user.userId];
     let paramIndex = 2;
 
-    if (type) {
-      queryText += ` AND t.type = $${paramIndex}`;
-      params.push(type);
-      paramIndex++;
-    }
-
-    if (status) {
-      queryText += ` AND t.status = $${paramIndex}`;
-      params.push(status);
-      paramIndex++;
-    }
-
+    if (type) { queryText += ` AND t.type = $${paramIndex}`; params.push(type); paramIndex++; }
+    if (status) { queryText += ` AND t.status = $${paramIndex}`; params.push(status); paramIndex++; }
     if (search) {
       queryText += ` AND (t.contact_name ILIKE $${paramIndex} OR u.name ILIKE $${paramIndex} OR u.username ILIKE $${paramIndex})`;
-      params.push(`%${search}%`);
-      paramIndex++;
+      params.push(`%${search}%`); paramIndex++;
     }
-
     queryText += ' ORDER BY t.updated_at DESC';
 
     const result = await query(queryText, params);
@@ -67,16 +55,14 @@ export async function POST(req: NextRequest) {
     if (!amount || !type || (!contactUserId && !contactName)) {
       return NextResponse.json({ error: 'Amount, type, and contact information are required' }, { status: 400 });
     }
-
     if (!['dena', 'paona'].includes(type)) {
       return NextResponse.json({ error: 'Type must be dena or paona' }, { status: 400 });
     }
-
     if (parseFloat(amount) <= 0) {
       return NextResponse.json({ error: 'Amount must be positive' }, { status: 400 });
     }
 
-    // Get contact name if registered user
+    // Get contact info if registered user
     let finalContactName = contactName;
     let contactEmail = null;
     if (contactUserId) {
@@ -86,6 +72,10 @@ export async function POST(req: NextRequest) {
         contactEmail = contactUser.rows[0].email;
       }
     }
+
+    // Get the current user's info
+    const ownerResult = await query('SELECT name, username FROM users WHERE id = $1', [user.userId]);
+    const ownerName = ownerResult.rows[0]?.name || 'Someone';
 
     const result = await query(
       `INSERT INTO transactions (owner_id, contact_user_id, contact_name, contact_phone, amount, paid_amount, type, notes, due_date)
@@ -100,23 +90,68 @@ export async function POST(req: NextRequest) {
     await query(
       `INSERT INTO activity_logs (user_id, action, description, metadata)
        VALUES ($1, 'transaction_created', $2, $3)`,
-      [user.userId, `Created ${type} transaction of ৳${amount} with ${finalContactName}`, JSON.stringify({ transactionId: transaction.id, type, amount })]
+      [user.userId, `Created ${type} transaction of ৳${amount} with ${finalContactName}`,
+       JSON.stringify({ transactionId: transaction.id, type, amount })]
     );
+
+    // ── NOTIFICATION SYSTEM ──
+    // If paona (someone owes the owner) and contact is a registered user,
+    // send a notification asking them to add to their dena list
+    if (type === 'paona' && contactUserId) {
+      try {
+        await query(
+          `INSERT INTO notifications (recipient_id, sender_id, type, title, message, data)
+           VALUES ($1, $2, 'transaction_request', $3, $4, $5)`,
+          [
+            contactUserId,
+            user.userId,
+            '💰 Paona Request',
+            `${ownerName} recorded that you owe them ৳${parseFloat(amount).toLocaleString()}. Do you want to add this to your Dena list?`,
+            JSON.stringify({
+              transactionId: transaction.id,
+              amount: parseFloat(amount),
+              senderName: ownerName,
+              senderId: user.userId,
+              notes: notes || null,
+            }),
+          ]
+        );
+      } catch (notifError) {
+        console.error('Notification error:', notifError);
+      }
+    }
+
+    // If dena (owner owes contact) and contact is registered,
+    // notify them that money is coming their way
+    if (type === 'dena' && contactUserId) {
+      try {
+        await query(
+          `INSERT INTO notifications (recipient_id, sender_id, type, title, message, data)
+           VALUES ($1, $2, 'dena_info', $3, $4, $5)`,
+          [
+            contactUserId,
+            user.userId,
+            '📋 Ledger Update',
+            `${ownerName} recorded that they owe you ৳${parseFloat(amount).toLocaleString()}. This is for your information only.`,
+            JSON.stringify({
+              transactionId: transaction.id,
+              amount: parseFloat(amount),
+              senderName: ownerName,
+              senderId: user.userId,
+            }),
+          ]
+        );
+      } catch (notifError) {
+        console.error('Notification error:', notifError);
+      }
+    }
 
     // Send email notification if contact is registered
     if (contactEmail && contactUserId) {
       try {
-        const ownerResult = await query('SELECT name FROM users WHERE id = $1', [user.userId]);
-        const ownerName = ownerResult.rows[0]?.name || 'Someone';
         await sendTransactionNotification(
-          contactEmail,
-          finalContactName,
-          ownerName,
-          'created',
-          type,
-          parseFloat(amount),
-          parseFloat(amount),
-          notes
+          contactEmail, finalContactName, ownerName,
+          'created', type, parseFloat(amount), parseFloat(amount), notes
         );
       } catch (emailError) {
         console.error('Email notification error:', emailError);

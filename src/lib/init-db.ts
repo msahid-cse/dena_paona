@@ -102,6 +102,35 @@ export async function initializeDatabase() {
       )
     `);
 
+    // Notifications table (transaction approval requests + general)
+    await query(`
+      CREATE TABLE IF NOT EXISTS notifications (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        recipient_id UUID REFERENCES users(id) ON DELETE CASCADE NOT NULL,
+        sender_id UUID REFERENCES users(id) ON DELETE CASCADE,
+        type VARCHAR(50) NOT NULL,
+        title VARCHAR(255) NOT NULL,
+        message TEXT NOT NULL,
+        data JSONB,
+        is_read BOOLEAN DEFAULT FALSE,
+        is_actioned BOOLEAN DEFAULT FALSE,
+        action_taken VARCHAR(50),
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      )
+    `);
+
+    // Messages table (user-to-user chat)
+    await query(`
+      CREATE TABLE IF NOT EXISTS messages (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        sender_id UUID REFERENCES users(id) ON DELETE CASCADE NOT NULL,
+        recipient_id UUID REFERENCES users(id) ON DELETE CASCADE NOT NULL,
+        content TEXT NOT NULL,
+        is_read BOOLEAN DEFAULT FALSE,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      )
+    `);
+
     // Create indexes for performance
     await query(`CREATE INDEX IF NOT EXISTS idx_transactions_owner ON transactions(owner_id)`);
     await query(`CREATE INDEX IF NOT EXISTS idx_transactions_contact ON transactions(contact_user_id)`);
@@ -109,6 +138,9 @@ export async function initializeDatabase() {
     await query(`CREATE INDEX IF NOT EXISTS idx_verification_codes_user ON verification_codes(user_id)`);
     await query(`CREATE INDEX IF NOT EXISTS idx_users_username ON users(username)`);
     await query(`CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_notifications_recipient ON notifications(recipient_id)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_messages_sender ON messages(sender_id)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_messages_recipient ON messages(recipient_id)`);
 
     // Add computed column trigger for remaining_amount
     await query(`
