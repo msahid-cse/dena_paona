@@ -168,6 +168,29 @@ export async function initializeDatabase() {
       FOR EACH ROW EXECUTE FUNCTION update_remaining_amount()
     `);
 
+    // ── MIGRATIONS: new columns (idempotent) ──────────────────────────
+    // users: username_set, profile_completed, bkash_available, language_pref
+    await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS username_set BOOLEAN DEFAULT FALSE`);
+    await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_completed BOOLEAN DEFAULT FALSE`);
+    await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS bkash_available BOOLEAN DEFAULT FALSE`);
+    await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS language_pref VARCHAR(20) DEFAULT 'en'`);
+    // Make username and phone nullable (existing NOT NULL constraints)
+    await query(`ALTER TABLE users ALTER COLUMN username DROP NOT NULL`);
+    await query(`ALTER TABLE users ALTER COLUMN phone DROP NOT NULL`);
+    // Remove the UNIQUE constraint on phone (could be null now)
+    await query(`ALTER TABLE users DROP CONSTRAINT IF EXISTS users_phone_key`);
+
+    // payment_history: approval workflow columns
+    await query(`ALTER TABLE payment_history ADD COLUMN IF NOT EXISTS approval_status VARCHAR(20) DEFAULT 'pending'`);
+    await query(`ALTER TABLE payment_history ADD COLUMN IF NOT EXISTS approved_by UUID REFERENCES users(id) ON DELETE SET NULL`);
+    await query(`ALTER TABLE payment_history ADD COLUMN IF NOT EXISTS approved_at TIMESTAMP WITH TIME ZONE`);
+    await query(`ALTER TABLE payment_history ADD COLUMN IF NOT EXISTS dispute_reason TEXT`);
+    await query(`ALTER TABLE payment_history ADD COLUMN IF NOT EXISTS dispute_proof TEXT`);
+    await query(`ALTER TABLE payment_history ADD COLUMN IF NOT EXISTS recorded_by UUID REFERENCES users(id) ON DELETE SET NULL`);
+
+    // Password reset codes (type already handled by verification_codes type field,
+    // but let's ensure the 'password_reset' type works — no new table needed)
+
     console.log('Database initialized successfully');
     return { success: true };
   } catch (error) {

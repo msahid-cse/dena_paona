@@ -8,7 +8,8 @@ export async function GET(req: NextRequest) {
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const result = await query(
-      `SELECT id, name, username, email, phone, age, gender, is_admin, is_verified, profile_picture, created_at
+      `SELECT id, name, username, email, phone, age, gender, is_admin, is_verified,
+              profile_picture, bkash_available, username_set, profile_completed, language_pref, created_at
        FROM users WHERE id = $1`,
       [user.userId]
     );
@@ -27,11 +28,19 @@ export async function PUT(req: NextRequest) {
     const user = getUserFromRequest(req);
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const { name, age, gender } = await req.json();
+    const { name, age, gender, phone, bkash_available, language_pref } = await req.json();
 
     await query(
-      `UPDATE users SET name = COALESCE($1, name), age = COALESCE($2, age), gender = COALESCE($3, gender), updated_at = NOW() WHERE id = $4`,
-      [name, age, gender, user.userId]
+      `UPDATE users
+       SET name = COALESCE($1, name),
+           age = COALESCE($2::INTEGER, age),
+           gender = COALESCE($3, gender),
+           phone = COALESCE($4, phone),
+           bkash_available = COALESCE($5, bkash_available),
+           language_pref = COALESCE($6, language_pref),
+           updated_at = NOW()
+       WHERE id = $7`,
+      [name || null, age || null, gender || null, phone || null, bkash_available ?? null, language_pref || null, user.userId]
     );
 
     return NextResponse.json({ success: true, message: 'Profile updated successfully' });

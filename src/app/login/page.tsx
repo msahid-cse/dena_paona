@@ -30,7 +30,19 @@ export default function LoginPage() {
     setLoading(false);
     if (result.success) {
       toast.success(t('welcomeBack') + '!');
-      router.push('/dashboard');
+      // Get user from localStorage to check flags
+      const savedUser = localStorage.getItem('dp_user');
+      if (savedUser) {
+        const u = JSON.parse(savedUser);
+        // Post-login redirect logic
+        if (!u.usernameSet) {
+          router.push('/set-username');
+        } else {
+          router.push('/dashboard');
+        }
+      } else {
+        router.push('/dashboard');
+      }
     } else {
       if (result.needsVerification && result.userId) {
         setNeedsVerification(true);

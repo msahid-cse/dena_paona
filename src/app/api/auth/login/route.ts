@@ -6,13 +6,18 @@ import { signToken } from '@/lib/jwt';
 interface UserRow {
   id: string;
   name: string;
-  username: string;
+  username: string | null;
   email: string;
-  phone: string;
+  phone: string | null;
   password_hash: string;
   is_verified: boolean;
   is_admin: boolean;
   is_banned: boolean;
+  username_set: boolean;
+  profile_completed: boolean;
+  profile_picture: string | null;
+  bkash_available: boolean;
+  language_pref: string;
 }
 
 export async function POST(req: NextRequest) {
@@ -24,8 +29,9 @@ export async function POST(req: NextRequest) {
 
     const cleanIdentifier = identifier.trim().toLowerCase();
     const result = await query(
-      `SELECT id, name, username, email, phone, password_hash, is_verified, is_admin, is_banned
-       FROM users WHERE email = $1 OR username = $1`,
+      `SELECT id, name, username, email, phone, password_hash, is_verified, is_admin, is_banned,
+              username_set, profile_completed, profile_picture, bkash_available, language_pref
+       FROM users WHERE email = $1 OR (username IS NOT NULL AND username = $1)`,
       [cleanIdentifier]
     );
 
@@ -55,7 +61,7 @@ export async function POST(req: NextRequest) {
     const token = signToken({
       userId: user.id,
       email: user.email,
-      username: user.username,
+      username: user.username ?? '',
       isAdmin: user.is_admin,
     });
 
@@ -70,10 +76,15 @@ export async function POST(req: NextRequest) {
       user: {
         id: user.id,
         name: user.name,
-        username: user.username,
+        username: user.username ?? null,
         email: user.email,
-        phone: user.phone,
+        phone: user.phone ?? null,
         isAdmin: user.is_admin,
+        usernameSet: user.username_set ?? false,
+        profileCompleted: user.profile_completed ?? false,
+        profilePicture: user.profile_picture ?? null,
+        bkashAvailable: user.bkash_available ?? false,
+        languagePref: user.language_pref ?? 'en',
       },
     });
 

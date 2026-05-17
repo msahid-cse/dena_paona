@@ -7,7 +7,12 @@ const nextConfig: NextConfig = {
       allowedOrigins: ['localhost:3000', 'denapaonaxd.vercel.app'],
     },
   },
-  serverExternalPackages: ['pg', 'bcryptjs', 'nodemailer'],
+  serverExternalPackages: ['pg', 'bcryptjs', 'nodemailer', 'cloudinary'],
+  images: {
+    remotePatterns: [
+      { protocol: 'https', hostname: 'res.cloudinary.com' },
+    ],
+  },
 };
 
 export default nextConfig;

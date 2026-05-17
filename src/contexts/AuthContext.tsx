@@ -3,13 +3,18 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import axios from 'axios';
 
-interface User {
+export interface User {
   id: string;
   name: string;
-  username: string;
+  username: string | null;
   email: string;
-  phone: string;
+  phone: string | null;
   isAdmin: boolean;
+  usernameSet: boolean;
+  profileCompleted: boolean;
+  profilePicture: string | null;
+  bkashAvailable: boolean;
+  languagePref: string;
 }
 
 interface AuthContextType {
@@ -17,6 +22,7 @@ interface AuthContextType {
   token: string | null;
   login: (identifier: string, password: string) => Promise<{ success: boolean; error?: string; needsVerification?: boolean; userId?: string }>;
   logout: () => void;
+  refreshUser: () => Promise<void>;
   isLoading: boolean;
 }
 
@@ -61,6 +67,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const refreshUser = async () => {
+    const savedToken = localStorage.getItem('dp_token');
+    if (!savedToken) return;
+    try {
+      const res = await axios.get('/api/user/profile', { headers: { Authorization: `Bearer ${savedToken}` } });
+      const u = res.data.user;
+      const updatedUser: User = {
+        id: u.id,
+        name: u.name,
+        username: u.username ?? null,
+        email: u.email,
+        phone: u.phone ?? null,
+        isAdmin: u.is_admin,
+        usernameSet: u.username_set ?? false,
+        profileCompleted: u.profile_completed ?? false,
+        profilePicture: u.profile_picture ?? null,
+        bkashAvailable: u.bkash_available ?? false,
+        languagePref: u.language_pref ?? 'en',
+      };
+      setUser(updatedUser);
+      localStorage.setItem('dp_user', JSON.stringify(updatedUser));
+    } catch {
+      // fail silently
+    }
+  };
+
   const logout = async () => {
     try {
       await axios.post('/api/auth/logout');
@@ -74,7 +106,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, login, logout, isLoading }}>
+    <AuthContext.Provider value={{ user, token, login, logout, refreshUser, isLoading }}>
       {children}
     </AuthContext.Provider>
   );
