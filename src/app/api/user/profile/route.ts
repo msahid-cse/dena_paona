@@ -28,19 +28,28 @@ export async function PUT(req: NextRequest) {
     const user = getUserFromRequest(req);
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const { name, age, gender, phone, bkash_available, language_pref } = await req.json();
+    const { name, username, age, gender, phone, bkash_available, language_pref } = await req.json();
+
+    if (username) {
+      // check if username is unique
+      const existing = await query('SELECT id FROM users WHERE username = $1 AND id != $2', [username, user.userId]);
+      if (existing.rows.length > 0) {
+        return NextResponse.json({ error: 'Username is already taken' }, { status: 400 });
+      }
+    }
 
     await query(
       `UPDATE users
        SET name = COALESCE($1, name),
-           age = COALESCE($2::INTEGER, age),
-           gender = COALESCE($3, gender),
-           phone = COALESCE($4, phone),
-           bkash_available = COALESCE($5, bkash_available),
-           language_pref = COALESCE($6, language_pref),
+           username = COALESCE($2, username),
+           age = COALESCE($3::INTEGER, age),
+           gender = COALESCE($4, gender),
+           phone = COALESCE($5, phone),
+           bkash_available = COALESCE($6, bkash_available),
+           language_pref = COALESCE($7, language_pref),
            updated_at = NOW()
-       WHERE id = $7`,
-      [name || null, age || null, gender || null, phone || null, bkash_available ?? null, language_pref || null, user.userId]
+       WHERE id = $8`,
+      [name || null, username || null, age || null, gender || null, phone || null, bkash_available ?? null, language_pref || null, user.userId]
     );
 
     return NextResponse.json({ success: true, message: 'Profile updated successfully' });

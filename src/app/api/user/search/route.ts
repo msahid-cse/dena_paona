@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
     }
 
     const result = await query(
-      `SELECT id, name, username, email, phone
+      `SELECT id, name, username, email, phone, profile_picture
        FROM users 
        WHERE is_verified = TRUE AND is_banned = FALSE AND id != $1
          AND (

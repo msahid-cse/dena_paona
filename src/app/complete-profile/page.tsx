@@ -128,7 +128,9 @@ export default function CompleteProfilePage() {
             >
               {avatarPreview
                 ? <img src={avatarPreview} alt="Avatar preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                : getInitials(user?.name || '')
+                : user?.profilePicture
+                  ? <img src={user.profilePicture} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  : getInitials(user?.name || '')
               }
             </div>
             <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleAvatarChange} />

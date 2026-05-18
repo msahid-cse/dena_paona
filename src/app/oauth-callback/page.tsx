@@ -26,7 +26,17 @@ function OAuthCallbackContent() {
       axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
 
       refreshUser().then(() => {
-        router.push('/dashboard');
+        const savedUser = localStorage.getItem('dp_user');
+        if (savedUser) {
+          const u = JSON.parse(savedUser);
+          if (!u.usernameSet) {
+            router.push('/set-username');
+          } else {
+            router.push('/dashboard');
+          }
+        } else {
+          router.push('/dashboard');
+        }
       }).catch((err) => {
         console.error('Failed to fetch user profile after OAuth:', err);
         router.push('/login?error=failed_to_fetch_user');

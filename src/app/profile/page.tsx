@@ -36,7 +36,7 @@ export default function ProfilePage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
-  const [form, setForm] = useState({ name: '', age: '', gender: '', phone: '', bkash_available: false, language_pref: 'en' });
+  const [form, setForm] = useState({ name: '', username: '', age: '', gender: '', phone: '', bkash_available: false, language_pref: 'en' });
   const [saving, setSaving] = useState(false);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
@@ -49,6 +49,7 @@ export default function ProfilePage() {
       setProfile(u);
       setForm({
         name: u.name,
+        username: u.username || '',
         age: u.age || '',
         gender: u.gender || '',
         phone: u.phone || '',
@@ -107,7 +108,9 @@ export default function ProfilePage() {
       setEditing(false);
       await fetchProfile();
       await refreshUser();
-    } catch { toast.error('Update failed'); }
+    } catch (error: any) { 
+      toast.error(error.response?.data?.error || 'Update failed'); 
+    }
     finally { setSaving(false); }
   };
 
@@ -205,10 +208,17 @@ export default function ProfilePage() {
 
             {editing ? (
               <form onSubmit={handleSave}>
-                <div className="form-group">
-                  <label className="form-label">{t('fullName')}</label>
-                  <input type="text" className="form-input" value={form.name}
-                    onChange={e => setForm(p => ({ ...p, name: e.target.value }))} required />
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
+                  <div className="form-group">
+                    <label className="form-label">{t('fullName')}</label>
+                    <input type="text" className="form-input" value={form.name}
+                      onChange={e => setForm(p => ({ ...p, name: e.target.value }))} required />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">{t('username')}</label>
+                    <input type="text" className="form-input" placeholder="unique_username" value={form.username}
+                      onChange={e => setForm(p => ({ ...p, username: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '') }))} />
+                  </div>
                 </div>
                 <div className="form-group">
                   <label className="form-label">{t('phone')}</label>

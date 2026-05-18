@@ -80,7 +80,13 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
         {user && (
           <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div className="avatar avatar-sm">{getInitials(user.name)}</div>
+              <div className="avatar avatar-sm">
+                {user.profilePicture ? (
+                  <img src={user.profilePicture} alt={user.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ) : (
+                  getInitials(user.name)
+                )}
+              </div>
               <div style={{ overflow: 'hidden', flex: 1 }}>
                 <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {user.name}

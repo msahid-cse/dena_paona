@@ -12,6 +12,7 @@ interface UserResult {
   username: string;
   email: string;
   phone: string;
+  profile_picture: string | null;
 }
 
 export default function ContactsPage() {
@@ -99,7 +100,13 @@ export default function ContactsPage() {
               {results.map(u => (
                 <div key={u.id} className="card" style={{ padding: '16px 20px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                    <div className="avatar avatar-lg">{u.name.charAt(0).toUpperCase()}</div>
+                    <div className="avatar avatar-lg">
+                      {u.profile_picture ? (
+                        <img src={u.profile_picture} alt={u.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      ) : (
+                        u.name.charAt(0).toUpperCase()
+                      )}
+                    </div>
                     <div style={{ flex: 1 }}>
                       <h3 style={{ fontWeight: 700, fontSize: 16, color: 'var(--text-primary)', marginBottom: 4 }}>{u.name}</h3>
                       <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
