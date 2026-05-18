@@ -33,7 +33,7 @@ export default function RootLayout({
           __html: `(function(){try{var t=localStorage.getItem('dp_theme')||'dark';document.documentElement.setAttribute('data-theme',t);}catch(e){}})();`
         }} />
       </head>
-      <body>
+      <body suppressHydrationWarning>
         <ThemeProvider>
           <LanguageProvider>
             <AuthProvider>
